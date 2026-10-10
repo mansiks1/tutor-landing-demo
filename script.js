@@ -173,4 +173,117 @@ function renderSite() {
     .forEach((render) => render());
 }
 
+// Мобильное меню: закрывается по ссылке, Escape и нажатию вне шапки.
+function initMenu() {
+  const button = document.querySelector('.menu-toggle');
+  const navigation = document.getElementById('navigation');
+  const setOpen = (open) => {
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', open ? site.ui.menuClose : site.ui.menuOpen);
+    navigation.dataset.open = String(open);
+  };
+  button.addEventListener('click', () => setOpen(button.getAttribute('aria-expanded') !== 'true'));
+  navigation.addEventListener('click', (event) => {
+    if (event.target.closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && button.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      button.focus();
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('#header')) setOpen(false);
+  });
+  document.getElementById('header').addEventListener('focusout', (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  });
+  window.addEventListener('resize', () => {
+    if (getComputedStyle(button).display === 'none') setOpen(false);
+  });
+}
+
+// Проверяется либо телефон, либо имя пользователя Telegram с символом @.
+function isValidContact(value) {
+  const phone = /^\+?[\d\s().-]+$/.test(value) && /^\d{10,15}$/.test(value.replace(/\D/g, ''));
+  const telegram = /^@[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(value);
+  return phone || telegram;
+}
+
+function validateField(field) {
+  const value = field.value.trim();
+  const labels = site.ui.booking;
+  let error = value ? '' : labels.fields[field.name].error;
+  if (value && field.name === 'contact' && !isValidContact(value)) error = labels.contactError;
+  if (value && field.name === 'subject' && !site.formSubjects.includes(value)) error = labels.fields.subject.error;
+  field.setAttribute('aria-invalid', String(Boolean(error)));
+  document.getElementById(`error-${field.name}`).textContent = error;
+  return !error;
+}
+
+function validateForm(form) {
+  const fields = [...form.querySelectorAll('[required]')];
+  const invalidFields = fields.filter((field) => !validateField(field));
+  invalidFields[0]?.focus();
+  return invalidFields.length === 0;
+}
+
+// Демонстрация: данные не передаются по сети и не сохраняются.
+async function sendBooking(data) {
+  // Подключение Google Forms или Telegram-бота начинается здесь.
+  // Замените задержку запросом к своему серверу и проверкой ответа.
+  // Токен Telegram-бота храните только на сервере, не в этом файле.
+  void data;
+  await new Promise((resolve) => window.setTimeout(resolve, 450));
+}
+
+function setSubmitting(form, pending) {
+  const button = form.querySelector('[type="submit"]');
+  form.setAttribute('aria-busy', String(pending));
+  button.disabled = pending;
+  button.textContent = pending ? site.ui.booking.submittingText : site.ui.booking.submitText;
+}
+
+async function handleBooking(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (form.getAttribute('aria-busy') === 'true') return;
+  const status = document.getElementById('form-status');
+  status.textContent = '';
+  if (!validateForm(form)) return;
+  const data = Object.fromEntries([...new FormData(form)].map(([key, value]) => [key, value.trim()]));
+  setSubmitting(form, true);
+  try {
+    await sendBooking(data);
+    form.reset();
+    status.dataset.error = 'false';
+    status.textContent = `${site.ui.booking.successText}. ${site.ui.booking.successNote}`;
+  } catch {
+    status.dataset.error = 'true';
+    status.textContent = site.ui.booking.failureText;
+  } finally {
+    setSubmitting(form, false);
+  }
+  status.focus();
+}
+
+function initBooking() {
+  const form = document.getElementById('booking-form');
+  form.addEventListener('submit', handleBooking);
+  form.addEventListener('input', (event) => {
+    if (event.target.matches('[required][aria-invalid="true"]')) validateField(event.target);
+    document.getElementById('form-status').textContent = '';
+  });
+  document.querySelectorAll('[data-subject]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const field = form.elements.namedItem('subject');
+      if (!site.formSubjects.includes(link.dataset.subject)) return;
+      field.value = link.dataset.subject;
+      validateField(field);
+    });
+  });
+}
+
 renderSite();
+initMenu();
+initBooking();
