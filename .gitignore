@@ -1,0 +1,30 @@
+# Зависимости и результаты сборки
+node_modules/
+dist/
+build/
+coverage/
+
+# Локальные настройки и секреты
+.env
+.env.*
+!.env.example
+*.local
+.vscode/
+.idea/
+
+# Кэш, отчёты и временные файлы
+.cache/
+.tmp/
+tmp/
+playwright-report/
+test-results/
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# Служебные файлы операционной системы
+.DS_Store
+Thumbs.db
+Desktop.ini
